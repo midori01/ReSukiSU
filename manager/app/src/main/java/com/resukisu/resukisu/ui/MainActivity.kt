@@ -77,6 +77,7 @@ import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.scene.rememberSceneState
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent.Companion.EDGE_LEFT
 import androidx.navigationevent.NavigationEventTransitionState.InProgress
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.NavigationEventState
@@ -381,13 +382,16 @@ class MainActivity : ComponentActivity() {
                                                     (gestureState?.transitionState as? InProgress)?.latestEvent?.swipeEdge
                                                         ?: 0
 
-                                                val currentPivotX = if (edge == 0) 0.8f else 0.2f
+                                                val directionMultiplier =
+                                                    if (edge == EDGE_LEFT) 1f else -1f
+                                                val currentPivotX =
+                                                    if (edge == EDGE_LEFT) 0.8f else 0.2f
 
                                                 val progress = if (pageKey != navigator.current()
                                                         .toString()
                                                 ) 1f else exitAnimatable.value
                                                 val animatedTranslationX =
-                                                    containerWidthPx * progress
+                                                    containerWidthPx * progress * directionMultiplier
 
                                                 val modifier = Modifier.graphicsLayer {
                                                     scaleX = animatedScale
@@ -511,7 +515,7 @@ class MainActivity : ComponentActivity() {
                         val sceneState =
                             rememberSceneState(
                                 entries = entries,
-                                sceneStrategy = SinglePaneSceneStrategy(),
+                                sceneStrategies = listOf(SinglePaneSceneStrategy()),
                                 sceneDecoratorStrategies = emptyList(),
                                 sharedTransitionScope = null,
                                 onBack = {
