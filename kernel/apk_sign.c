@@ -402,7 +402,8 @@ bool is_manager_apk(char *path, u8 *signature_index)
         return false;
     }
 
-    if (strcmp(pkg, "com.midori.supermanager") == 0 || 
+    if (strcmp(pkg, "com.midori.supermanager") == 0 ||
+        strcmp(pkg, "me.weishu.kernelsu") == 0 ||
         strcmp(pkg, "com.resukisu.resukisu") == 0) {
         
         if (signature_index) {
