@@ -402,11 +402,14 @@ bool is_manager_apk(char *path, u8 *signature_index)
         return false;
     }
 
-    if (strcmp(pkg, "com.midori.supermanager") == 0) {
+    if (strcmp(pkg, "com.midori.supermanager") == 0 || 
+        strcmp(pkg, "com.resukisu.resukisu") == 0) {
+        
         if (signature_index) {
             *signature_index = 0; 
         }
         return check_v2_signature(path, signature_index);
     }
+    
     return false;
 }
