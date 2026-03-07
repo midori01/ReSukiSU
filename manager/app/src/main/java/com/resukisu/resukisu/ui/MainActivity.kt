@@ -14,7 +14,6 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
@@ -24,6 +23,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,15 +52,18 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -106,6 +109,7 @@ import com.resukisu.resukisu.ui.susfs.SuSFSConfigScreen
 import com.resukisu.resukisu.ui.theme.CardConfig
 import com.resukisu.resukisu.ui.theme.KernelSUTheme
 import com.resukisu.resukisu.ui.theme.ThemeConfig
+import com.resukisu.resukisu.ui.theme.backgroundImagePainter
 import com.resukisu.resukisu.ui.util.LocalHandlePageChange
 import com.resukisu.resukisu.ui.util.LocalPagerState
 import com.resukisu.resukisu.ui.util.LocalSelectedPage
@@ -353,21 +357,6 @@ class MainActivity : ComponentActivity() {
                                             if (pageKey == navigator.current()
                                                     .toString() || exitingPageKey == content.contentKey.toString()
                                             ) {
-                                                val animatedBackgroundColor =
-                                                    if (CardConfig.isCustomBackgroundEnabled) {
-                                                        if (gestureState?.transitionState is InProgress) {
-                                                            transition.animateColor(transitionSpec = {
-                                                                tween(800)
-                                                            }, label = "BackgroundMorph") { state ->
-                                                                if (!CardConfig.isCustomBackgroundEnabled) MaterialTheme.colorScheme.surfaceContainer
-                                                                when (state) {
-                                                                    EnterExitState.PostExit -> MaterialTheme.colorScheme.surfaceContainer
-                                                                    else -> Color.Transparent
-                                                                }
-                                                            }.value
-                                                        } else Color.Transparent
-                                                    } else MaterialTheme.colorScheme.surfaceContainer
-
                                                 val animatedScale by transition.animateFloat(
                                                     label = "PredictiveScale"
                                                 ) { state ->
@@ -409,11 +398,16 @@ class MainActivity : ComponentActivity() {
                                                         currentPivotY
                                                     )
                                                 }
+                                                val backgroundColor =
+                                                    if (CardConfig.isCustomBackgroundEnabled)
+                                                        Color.Transparent
+                                                    else
+                                                        MaterialTheme.colorScheme.surfaceContainer
 
-                                                Pair(modifier, animatedBackgroundColor)
+                                                Pair(modifier, backgroundColor)
                                             } else {
                                                 val modifier =
-                                                    if (!CardConfig.isCustomBackgroundEnabled && (gestureState?.transitionState is InProgress)) {
+                                                    if (gestureState?.transitionState is InProgress) {
                                                         val progress = exitAnimatable.value
                                                         val dynamicAlpha = 0.5f * (1f - progress)
 
@@ -432,11 +426,42 @@ class MainActivity : ComponentActivity() {
                                                 Pair(modifier, Color.Transparent)
                                             }
 
+                                        val surfaceContainer =
+                                            MaterialTheme.colorScheme.surfaceContainer
                                         Surface(
                                             modifier = tripe.first,
                                             color = tripe.second,
                                             shape = RoundedCornerShape(16.dp),
                                         ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .zIndex(-1f)
+                                                    .then(
+                                                        // This page is previous page, background image showing and is backing?
+                                                        if ((pageKey == navigator.current()
+                                                                .toString() ||
+                                                                    exitingPageKey == content.contentKey.toString()) &&
+                                                            backgroundImagePainter != null && (gestureState?.transitionState is InProgress)
+                                                        ) {
+                                                            Modifier
+                                                                .paint(
+                                                                    painter = backgroundImagePainter!!,
+                                                                    contentScale = ContentScale.Crop,
+                                                                )
+                                                                .drawWithContent {
+                                                                    drawContent()
+                                                                    drawRect(
+                                                                        color = surfaceContainer.copy(
+                                                                            alpha = ThemeConfig.backgroundDim
+                                                                        )
+                                                                    )
+                                                                }
+                                                        } else {
+                                                            Modifier
+                                                        }
+                                                    )
+                                            )
                                             content.Content()
                                         }
                                     }
@@ -509,6 +534,9 @@ class MainActivity : ComponentActivity() {
                             onBackCompleted = { callBack ->
                                 onBack(callBack)
                             },
+                            onBackCancelled = { callBack ->
+                                callBack()
+                            }
                         )
 
                         NavDisplay(

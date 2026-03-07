@@ -34,11 +34,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -336,6 +334,9 @@ private fun BackgroundLayer(darkTheme: Boolean) {
 
     LaunchedEffect(ThemeConfig.customBackgroundUri) {
         backgroundUri.value = ThemeConfig.customBackgroundUri
+        if (backgroundUri.value == null) {
+            backgroundImagePainter = null
+        }
     }
 
     // 默认背景
@@ -354,9 +355,11 @@ private fun BackgroundLayer(darkTheme: Boolean) {
     }
 }
 
+var backgroundImagePainter: AsyncImagePainter? = null
+
 @Composable
 private fun CustomBackgroundLayer(uri: Uri, darkTheme: Boolean) {
-    val painter = rememberAsyncImagePainter(
+    backgroundImagePainter = rememberAsyncImagePainter(
         model = uri,
         onError = { error ->
             Log.e("ThemeSystem", "背景加载失败: ${error.result.throwable.message}")
@@ -374,40 +377,33 @@ private fun CustomBackgroundLayer(uri: Uri, darkTheme: Boolean) {
         label = "backgroundTransition"
     )
 
-    val alpha by transition.animateFloat(
-        label = "backgroundAlpha",
-        transitionSpec = {
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        }
-    ) { loaded -> if (loaded) 1f else 0f }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(-1f)
-            .alpha(alpha)
+//            .alpha(alpha)
     ) {
-        val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
-        // 背景图片
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .paint(
-                    painter = painter,
-                    contentScale = ContentScale.Crop,
-                )
-                .graphicsLayer {
-                    this.alpha =
-                        (painter.state as? AsyncImagePainter.State.Success)?.let { 1f } ?: 0f
-                }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(color = surfaceContainer.copy(alpha = ThemeConfig.backgroundDim))
-                }
-        )
+        backgroundImagePainter?.let { painter ->
+            val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
+            // 背景图片
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .paint(
+                        painter = painter,
+                        contentScale = ContentScale.Crop,
+                    )
+//                    .graphicsLayer {
+//                        this.alpha =
+//                            (painter.state as? AsyncImagePainter.State.Success)?.let { 1f }
+//                                ?: 0f
+//                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(color = surfaceContainer.copy(alpha = ThemeConfig.backgroundDim))
+                    }
+            )
+        }
     }
 }
 
